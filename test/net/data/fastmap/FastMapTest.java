@@ -61,7 +61,7 @@ public class FastMapTest {
 
         Random r = new Random(42);
         long start = System.currentTimeMillis();
-        for (int i = 0; i < 10000000; i++) {
+        for (int i = 0; i < 1000000; i++) {
             int key = r.nextInt(90000);
             int value = r.nextInt();
             verifyMap.put(key, value);
@@ -71,7 +71,7 @@ public class FastMapTest {
 
         r = new Random(42);
         start = System.currentTimeMillis();
-        for (int i = 0; i < 1000000000; i++) {
+        for (int i = 0; i < 1000000; i++) {
             int key = r.nextInt(90000);
             int value = r.nextInt();
             testMap.put(key, value);

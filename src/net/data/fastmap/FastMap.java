@@ -10,15 +10,12 @@ public class FastMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
     private int size;
     private int capacity;
 
-    private List<Integer> hashes;
     private List<MapEntry> entries;
 
     public FastMap(int capacity) {
         this.capacity = capacity;
-        hashes = new ArrayList<>(capacity);
         entries = new ArrayList<>(capacity);
         for (int i = 0; i < capacity; i++) {
-            hashes.add(null);
             entries.add(null);
         }
     }
@@ -66,36 +63,29 @@ public class FastMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
     }
 
     private V putEntry(MapEntry entry) {
-        if (getLoadFactor() >= 0.95 || (capacity - size == 0)) {
+        if (getLoadFactor() >= 0.99 || (capacity - size == 0)) {
             increaseSize();
         }
         int pos = toPosition(entry.hash);
         int distance = 0;
 
         while (true) {
-            Integer prevHash = hashes.get(pos);
-            if (prevHash == null) {
+            MapEntry prevEntry = entries.get(pos);
+            if (prevEntry == null) {
                 // found a new home
                 size++;
-                hashes.set(pos, entry.hash);
                 entries.set(pos, entry);
                 return null;
             }
 
-            if (prevHash == entry.hash) {
-                MapEntry prevEntry = entries.get(pos);
-                if (keysEqual(prevEntry.key, entry.key)) {
-                    // replace the old entry
-                    hashes.set(pos, entry.hash);
-                    entries.set(pos, entry);
-                    return prevEntry.value;
-                }
+            if (prevEntry.hash == entry.hash && keysEqual(prevEntry.key, entry.key)) {
+                // replace the old entry
+                entries.set(pos, entry);
+                return prevEntry.value;
             }
 
-            if (distance(prevHash, pos) < distance) {
+            if (distance(prevEntry.hash, pos) < distance) {
                 // take from the rich, give to the poor
-                MapEntry prevEntry = entries.get(pos);
-                hashes.set(pos, entry.hash);
                 entries.set(pos, entry);
                 entry = prevEntry;
             }
@@ -125,14 +115,12 @@ public class FastMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
         capacity = Math.multiplyExact(capacity, 2);
 
         List<MapEntry> oldEntries = entries;
-        hashes = new ArrayList<>(capacity);
         entries = new ArrayList<>(capacity);
         for (int i = 0; i < capacity; i++) {
-            hashes.add(null);
             entries.add(null);
         }
 
-        oldEntries.stream().filter(e -> e != null).forEach(this::putEntry);
+        oldEntries.stream().filter(Objects::nonNull).forEach(this::putEntry);
     }
 
     private MapEntry getEntry(int hash, Object key) {
@@ -140,19 +128,16 @@ public class FastMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
         int distance = 0;
 
         while (true) {
-            Integer searchHash = hashes.get(pos);
-            if (searchHash == null) {
+            MapEntry searchEntry = entries.get(pos);
+            if (searchEntry == null) {
                 // found nothing
                 return null;
             }
-            if (searchHash == hash) {
-                MapEntry searchEntry = entries.get(pos);
-                if (keysEqual(key, searchEntry.key)) {
-                    return searchEntry;
-                }
+            if (searchEntry.hash == hash && keysEqual(key, searchEntry.key)) {
+                return searchEntry;
             }
 
-            if (distance(searchHash, pos) < distance) {
+            if (distance(searchEntry.hash, pos) < distance) {
                 // if it were here, we would have found it by now
                 return null;
             }
@@ -177,7 +162,6 @@ public class FastMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
 
     @Override
     public void clear() {
-        hashes.clear();
         entries.clear();
         size = 0;
     }
